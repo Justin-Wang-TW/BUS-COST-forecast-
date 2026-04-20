@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) { return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isOwner(uid) { return isVerified() && request.auth.uid == uid; }
+
+    function isValidUserCosts(data, uid) {
+      return data.keys().hasAll(['userId', 'industry', 'costs', 'updatedAt']) 
+          && data.keys().size() == 4
+          && data.userId == uid
+          && data.industry is string && data.industry.size() <= 20
+          && data.costs is map
+          && data.updatedAt == request.time;
+    }
+
+    match /users/{userId}/costs/{industryId} {
+      allow read: if isOwner(userId) && isValidId(userId) && isValidId(industryId);
+      allow list: if isOwner(userId) && isValidId(userId);
+      allow create: if isOwner(userId)
+                    && isValidId(userId)
+                    && isValidId(industryId)
+                    && isValidUserCosts(incoming(), userId)
+                    && incoming().industry == industryId;
+      allow update: if isOwner(userId)
+                    && isValidId(userId)
+                    && isValidId(industryId)
+                    && isValidUserCosts(incoming(), userId)
+                    && (
+                      incoming().diff(existing()).affectedKeys().hasOnly(['costs', 'updatedAt'])
+                    )
+                    && incoming().industry == existing().industry
+                    && incoming().userId == existing().userId;
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(industryId);
+    }
+  }
+}

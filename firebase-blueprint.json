@@ -1,0 +1,36 @@
+{
+  "entities": {
+    "UserCosts": {
+      "title": "User Industry Costs",
+      "description": "Stores the cost inputs for a user per industry.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The Firebase Auth UID of the owner."
+        },
+        "industry": {
+          "type": "string",
+          "description": "The industry key: bus_diesel, bus_ev, or taxi."
+        },
+        "costs": {
+          "type": "object",
+          "description": "Key-value pair of cost parameter IDs to numeric cost values."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "industry", "costs", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/costs/{industryId}": {
+      "schema": {
+        "$ref": "#/entities/UserCosts"
+      },
+      "description": "Stores cost inputs mapped to a specific industry for a user."
+    }
+  }
+}
